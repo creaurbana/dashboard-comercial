@@ -796,7 +796,42 @@ let rawObjetivos = [];
 let objetivosActivos = null;
 let unidadesMap  = {};
 let clientesMap  = {};
-const prometheoCache = {}; // clave: "YYYY-MM-DD|YYYY-MM-DD" -> leads[]
+// ─── CACHE ────────────────────────────────────────────────────────────────────
+// Prometheo: localStorage con TTL 24hs (datos no sensibles — solo nombre/tel)
+// Airtable: sessionStorage solamente (se borra al cerrar el navegador)
+const CACHE_TTL_PROMETHEO = 24 * 60 * 60 * 1000; // 24 horas
+
+function cacheSetPrometheo(key, data) {
+  try {
+    localStorage.setItem('cache_' + key, JSON.stringify({ data, expires: Date.now() + CACHE_TTL_PROMETHEO }));
+  } catch(e) {}
+}
+
+function cacheGetPrometheo(key) {
+  try {
+    const raw = localStorage.getItem('cache_' + key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (Date.now() > obj.expires) { localStorage.removeItem('cache_' + key); return null; }
+    return obj.data;
+  } catch(e) { return null; }
+}
+
+function cacheSetAirtable(key, data) {
+  try { sessionStorage.setItem('at_' + key, JSON.stringify(data)); } catch(e) {}
+}
+
+function cacheGetAirtable(key) {
+  try {
+    const raw = sessionStorage.getItem('at_' + key);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function cacheClear() {
+  Object.keys(localStorage).filter(k => k.startsWith('cache_')).forEach(k => localStorage.removeItem(k));
+  sessionStorage.clear();
+}
 // ─── ESTADO DE FILTROS ────────────────────────────────────────────────────────
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 let selectedYear  = new Date().getFullYear();
@@ -936,10 +971,17 @@ function inPeriod(dateStr) {
 }
 
 // ─── AIRTABLE API ─────────────────────────────────────────────────────────────
-async function fetchAirtable(table, filterFormula = '') {
+async function fetchAirtable(table, filterFormula = '', forceRefresh = false) {
   const base  = AIRTABLE_BASE();
   const token = AIRTABLE_TOKEN();
   if (!base || !token) throw new Error('Credenciales de Airtable no configuradas');
+
+  const cacheKey = 'at_' + table.replace(/\s+/g,'_') + (filterFormula ? '_f' : '');
+
+  if (!forceRefresh) {
+    const cached = cacheGetAirtable(cacheKey);
+    if (cached) { console.log('Airtable desde cache:', table); return cached; }
+  }
 
   let records = [];
   let offset  = '';
@@ -960,6 +1002,7 @@ async function fetchAirtable(table, filterFormula = '') {
     offset = data.offset || '';
   } while (offset);
 
+  cacheSetAirtable(cacheKey, records);
   return records;
 }
 
@@ -971,12 +1014,12 @@ async function fetchPrometeo(forceRefresh = false) {
   const { from, to } = getPeriodDates();
   const startDate = from.toISOString();
   const endDate   = to.toISOString();
-  const cacheKey  = startDate.slice(0,10) + '|' + endDate.slice(0,10);
+  const cacheKey  = 'prometheo_' + startDate.slice(0,10) + '_' + endDate.slice(0,10);
 
   // Devolver cache si existe y no se fuerza refresco
-  if (!forceRefresh && prometheoCache[cacheKey]) {
-    console.log('Prometheo desde cache:', cacheKey);
-    return prometheoCache[cacheKey];
+  if (!forceRefresh) {
+    const cached = cacheGetPrometheo(cacheKey);
+    if (cached) { console.log('Prometheo desde cache:', cacheKey); return cached; }
   }
 
   let leads  = [];
@@ -1000,7 +1043,7 @@ async function fetchPrometeo(forceRefresh = false) {
     page++;
   }
 
-  prometheoCache[cacheKey] = leads; // guardar en cache
+  cacheSetPrometheo(cacheKey, leads);
   return leads;
 }
 
@@ -1011,8 +1054,8 @@ async function loadAll() {
     openConfig(); return;
   }
 
-  // Limpiar cache al hacer refresh manual para forzar datos frescos
-  Object.keys(prometheoCache).forEach(k => delete prometheoCache[k]);
+  // Limpiar todo el cache al hacer refresh manual
+  cacheClear();
 
   document.getElementById('loading').style.display = 'flex';
   document.getElementById('content').style.display = 'none';
@@ -1030,12 +1073,12 @@ async function loadAll() {
     unidadesResult,
     objetivosResult
   ] = await Promise.allSettled([
-    fetchPrometeo(true), // force refresh en carga inicial
-    fetchAirtable('Visitas y Reuniones', "{Status}='Concretada'"),
-    fetchAirtable('Ofertas y Reservas', "OR({Tipo}='Oferta',{Tipo}='Reserva')"),
-    fetchAirtable('Clientes'),
-    fetchAirtable('Unidades'),
-    fetchAirtable('Objetivos')
+    fetchPrometeo(true),
+    fetchAirtable('Visitas y Reuniones', "{Status}='Concretada'", true),
+    fetchAirtable('Ofertas y Reservas', "OR({Tipo}='Oferta',{Tipo}='Reserva')", true),
+    fetchAirtable('Clientes', '', true),
+    fetchAirtable('Unidades', '', true),
+    fetchAirtable('Objetivos', '', true)
   ]);
 
   if (leadsResult.status === 'fulfilled') {
@@ -1390,13 +1433,32 @@ function setPeriod(period, btn) {
 }
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
-const PASSWORD = 'Creaurbana.2026';
+const PASSWORD       = 'Creaurbana.2026';
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+let sessionTimer = null;
+
+function resetSessionTimer() {
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    sessionStorage.removeItem('auth');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-input').value = '';
+    document.getElementById('login-error').textContent = 'Sesión expirada por inactividad';
+    setTimeout(() => document.getElementById('login-input').focus(), 100);
+  }, SESSION_TIMEOUT);
+}
+
+// Reiniciar timer con cualquier interacción
+['click','keydown','touchstart','scroll'].forEach(ev =>
+  document.addEventListener(ev, resetSessionTimer, { passive: true })
+);
 
 function checkLogin() {
   const val = document.getElementById('login-input').value;
   if (val === PASSWORD) {
     sessionStorage.setItem('auth', '1');
     document.getElementById('login-screen').classList.add('hidden');
+    resetSessionTimer();
     initDashboard();
   } else {
     document.getElementById('login-error').textContent = 'Contraseña incorrecta';
@@ -1446,6 +1508,7 @@ window.addEventListener('click', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('auth') === '1') {
     document.getElementById('login-screen').classList.add('hidden');
+    resetSessionTimer();
     initDashboard();
   } else {
     setTimeout(() => document.getElementById('login-input').focus(), 100);
