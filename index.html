@@ -480,15 +480,93 @@
   }
   .btn-config:hover { border-color: var(--accent); color: var(--accent); }
 
-  @media (max-width: 640px) {
-    header, .filters, main { padding-left: 16px; padding-right: 16px; }
-    .kpi-value { font-size: 26px; }
-    th, td { padding: 10px 12px; }
+  /* LOGIN */
+  #login-screen {
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+  }
+  #login-screen.hidden { display: none; }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 40px 36px;
+    width: 100%; max-width: 380px;
+    margin: 20px;
+    text-align: center;
+  }
+  .login-box h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; font-weight: 400;
+    color: var(--accent2); margin-bottom: 6px;
+  }
+  .login-box p { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .login-box input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    text-align: center;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-error { font-size: 12px; color: var(--red); margin-bottom: 10px; min-height: 18px; }
+  .login-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #1a1200;
+    border: none; border-radius: 8px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .login-btn:hover { opacity: 0.85; }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    header { padding: 16px; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .header-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .filters { padding: 10px 12px; gap: 6px; }
+    main { padding: 16px 12px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .kpi-value { font-size: 24px; }
+    .kpi-value.money { font-size: 18px; }
+    .obj-grid { grid-template-columns: 1fr; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 600px; }
+    th, td { padding: 10px 10px; font-size: 12px; }
     .hide-mobile { display: none; }
+    .section-title { font-size: 13px; margin-top: 20px; }
+    .filter-label { display: none; }
+    .filter-sep { display: none; }
+    .period-btn { padding: 5px 7px; font-size: 11px; }
+    .cal-btn { font-size: 11px; padding: 5px 7px; }
+    select { font-size: 12px; padding: 5px 8px; }
   }
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Dashboard Comercial</h1>
+    <p>Ingresá la contraseña para continuar</p>
+    <input type="password" id="login-input" placeholder="••••••••••••" onkeydown="if(event.key==='Enter')checkLogin()">
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" onclick="checkLogin()">Ingresar</button>
+  </div>
+</div>
 
 <!-- CONFIG PANEL -->
 <div id="config-panel">
@@ -1068,12 +1146,15 @@ function filterByPeriod(records, dateField) {
 
 // ─── RENDER PRINCIPAL ─────────────────────────────────────────────────────────
 async function renderAll() {
-  // Actualizar leads de Prometheo si cambia el período
+  // Solo actualizar Prometheo (rápido, filtrado por período)
+  // Airtable ya está en memoria desde loadAll()
+  setText('kpi-leads', '…');
   try {
     rawLeads = await fetchPrometeo();
     setDot('prometheo', 'ok');
   } catch(e) {
     setDot('prometheo', 'err');
+    rawLeads = [];
   }
 
   // Aplicar filtros
@@ -1304,6 +1385,39 @@ function setPeriod(period, btn) {
   if (period !== 'custom') loadAll();
 }
 
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+const PASSWORD = 'Creaurbana.2026';
+
+function checkLogin() {
+  const val = document.getElementById('login-input').value;
+  if (val === PASSWORD) {
+    sessionStorage.setItem('auth', '1');
+    document.getElementById('login-screen').classList.add('hidden');
+    initDashboard();
+  } else {
+    document.getElementById('login-error').textContent = 'Contraseña incorrecta';
+    document.getElementById('login-input').value = '';
+    document.getElementById('login-input').focus();
+  }
+}
+
+function initDashboard() {
+  const prEl   = document.getElementById('cfg-prometheo');
+  const atEl   = document.getElementById('cfg-airtable-token');
+  const baseEl = document.getElementById('cfg-airtable-base');
+  if (prEl)   prEl.value   = localStorage.getItem('pr_token') || '';
+  if (atEl)   atEl.value   = localStorage.getItem('at_token') || '';
+  if (baseEl) baseEl.value = localStorage.getItem('at_base')  || '';
+  buildFilterUI();
+  if (!AIRTABLE_BASE() || !AIRTABLE_TOKEN() || !PROMETHEO_TOKEN()) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    openConfig();
+  } else {
+    loadAll();
+  }
+}
+
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 function openConfig() { document.getElementById('config-panel').classList.add('show'); }
 function closeConfig() { document.getElementById('config-panel').classList.remove('show'); }
@@ -1326,21 +1440,11 @@ window.addEventListener('click', (e) => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Pre-cargar valores guardados en config panel
-  const prEl = document.getElementById('cfg-prometheo');
-  const atEl = document.getElementById('cfg-airtable-token');
-  const baseEl= document.getElementById('cfg-airtable-base');
-  if (prEl) prEl.value   = localStorage.getItem('pr_token') || '';
-  if (atEl) atEl.value   = localStorage.getItem('at_token') || '';
-  if (baseEl) baseEl.value = localStorage.getItem('at_base') || '';
-
-  buildFilterUI();
-  if (!AIRTABLE_BASE() || !AIRTABLE_TOKEN() || !PROMETHEO_TOKEN()) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
-    openConfig();
+  if (sessionStorage.getItem('auth') === '1') {
+    document.getElementById('login-screen').classList.add('hidden');
+    initDashboard();
   } else {
-    loadAll();
+    setTimeout(() => document.getElementById('login-input').focus(), 100);
   }
 });
 </script>
