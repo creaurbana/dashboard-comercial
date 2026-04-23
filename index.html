@@ -793,9 +793,10 @@ let rawOfertas   = [];
 let rawClientes  = [];
 let rawUnidades  = [];
 let rawObjetivos = [];
-let objetivosActivos = null; // registro de Airtable que aplica al período actual
-let unidadesMap  = {}; // id -> nombre
-let clientesMap  = {}; // id -> { nombreZenvia, qReus }
+let objetivosActivos = null;
+let unidadesMap  = {};
+let clientesMap  = {};
+const prometheoCache = {}; // clave: "YYYY-MM-DD|YYYY-MM-DD" -> leads[]
 // ─── ESTADO DE FILTROS ────────────────────────────────────────────────────────
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 let selectedYear  = new Date().getFullYear();
@@ -963,13 +964,20 @@ async function fetchAirtable(table, filterFormula = '') {
 }
 
 // ─── PROMETHEO API ────────────────────────────────────────────────────────────
-async function fetchPrometeo() {
+async function fetchPrometeo(forceRefresh = false) {
   const token = PROMETHEO_TOKEN();
   if (!token) throw new Error('Token de Prometheo no configurado');
 
   const { from, to } = getPeriodDates();
   const startDate = from.toISOString();
   const endDate   = to.toISOString();
+  const cacheKey  = startDate.slice(0,10) + '|' + endDate.slice(0,10);
+
+  // Devolver cache si existe y no se fuerza refresco
+  if (!forceRefresh && prometheoCache[cacheKey]) {
+    console.log('Prometheo desde cache:', cacheKey);
+    return prometheoCache[cacheKey];
+  }
 
   let leads  = [];
   let page   = 1;
@@ -991,6 +999,8 @@ async function fetchPrometeo() {
     hasMore = page < (pagination.total_pages || 1);
     page++;
   }
+
+  prometheoCache[cacheKey] = leads; // guardar en cache
   return leads;
 }
 
@@ -1001,6 +1011,9 @@ async function loadAll() {
     openConfig(); return;
   }
 
+  // Limpiar cache al hacer refresh manual para forzar datos frescos
+  Object.keys(prometheoCache).forEach(k => delete prometheoCache[k]);
+
   document.getElementById('loading').style.display = 'flex';
   document.getElementById('content').style.display = 'none';
   document.getElementById('btn-refresh').disabled  = true;
@@ -1008,57 +1021,45 @@ async function loadAll() {
 
   let errors = [];
 
-  // Prometheo
-  try {
-    rawLeads = await fetchPrometeo();
+  // Cargar todo en paralelo — Prometheo + todas las tablas de Airtable al mismo tiempo
+  const [
+    leadsResult,
+    visitasResult,
+    ofertasResult,
+    clientesResult,
+    unidadesResult,
+    objetivosResult
+  ] = await Promise.allSettled([
+    fetchPrometeo(true), // force refresh en carga inicial
+    fetchAirtable('Visitas y Reuniones', "{Status}='Concretada'"),
+    fetchAirtable('Ofertas y Reservas', "OR({Tipo}='Oferta',{Tipo}='Reserva')"),
+    fetchAirtable('Clientes'),
+    fetchAirtable('Unidades'),
+    fetchAirtable('Objetivos')
+  ]);
+
+  if (leadsResult.status === 'fulfilled') {
+    rawLeads = leadsResult.value;
     setDot('prometheo', 'ok');
-  } catch(e) {
-    errors.push('Prometheo: ' + e.message);
+  } else {
+    errors.push('Prometheo: ' + leadsResult.reason?.message);
     rawLeads = [];
     setDot('prometheo', 'err');
   }
 
-  // Airtable — Visitas concretadas
-  try {
-    rawVisitas = await fetchAirtable('Visitas y Reuniones', "{Status}='Concretada'");
+  if (visitasResult.status === 'fulfilled') {
+    rawVisitas = visitasResult.value;
     setDot('airtable', 'ok');
-  } catch(e) {
-    errors.push('Visitas: ' + e.message);
+  } else {
+    errors.push('Visitas: ' + visitasResult.reason?.message);
     rawVisitas = [];
     setDot('airtable', 'err');
   }
 
-  // Airtable — Ofertas y Reservas
-  try {
-    rawOfertas = await fetchAirtable('Ofertas y Reservas', "OR({Tipo}='Oferta',{Tipo}='Reserva')");
-  } catch(e) {
-    errors.push('Ofertas: ' + e.message);
-    rawOfertas = [];
-  }
-
-  // Airtable — Clientes
-  try {
-    rawClientes = await fetchAirtable('Clientes');
-  } catch(e) {
-    errors.push('Clientes: ' + e.message);
-    rawClientes = [];
-  }
-
-  // Airtable — Unidades (tabla vinculada desde Ofertas y Reservas)
-  try {
-    rawUnidades = await fetchAirtable('Unidades');
-  } catch(e) {
-    errors.push('Unidades: ' + e.message);
-    rawUnidades = [];
-  }
-
-  // Airtable — Objetivos
-  try {
-    rawObjetivos = await fetchAirtable('Objetivos');
-  } catch(e) {
-    errors.push('Objetivos: ' + e.message);
-    rawObjetivos = [];
-  }
+  rawOfertas   = ofertasResult.status  === 'fulfilled' ? ofertasResult.value   : (errors.push('Ofertas: '   + ofertasResult.reason?.message),  []);
+  rawClientes  = clientesResult.status === 'fulfilled' ? clientesResult.value  : (errors.push('Clientes: '  + clientesResult.reason?.message),  []);
+  rawUnidades  = unidadesResult.status === 'fulfilled' ? unidadesResult.value  : (errors.push('Unidades: '  + unidadesResult.reason?.message),  []);
+  rawObjetivos = objetivosResult.status=== 'fulfilled' ? objetivosResult.value : (errors.push('Objetivos: ' + objetivosResult.reason?.message), []);
 
   // Construir mapa Unidades: id -> nombre
   unidadesMap = {};
@@ -1153,7 +1154,7 @@ async function renderAll() {
   // Airtable ya está en memoria desde loadAll()
   setText('kpi-leads', '…');
   try {
-    rawLeads = await fetchPrometeo();
+    rawLeads = await fetchPrometeo(false); // usa cache si existe
     setDot('prometheo', 'ok');
   } catch(e) {
     setDot('prometheo', 'err');
