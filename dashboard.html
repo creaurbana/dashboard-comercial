@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Comercial</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #181818;
+    --surface2: #222222;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --muted: #8a8680;
+    --accent: #c9a96e;
+    --accent2: #e8d5b0;
+    --green: #4caf82;
+    --red: #e05252;
+    --yellow: #e8b84b;
+    --blue: #5b8dee;
+    --jonatan: #c9a96e;
+    --delfina: #5b8dee;
+    --massimo: #4caf82;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .header-left h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--accent2);
+    letter-spacing: -0.3px;
+  }
+  .header-left p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.err { background: var(--red); }
+  .btn-refresh {
+    background: var(--accent);
+    color: #1a1200;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: opacity 0.2s;
+  }
+  .btn-refresh:hover { opacity: 0.85; }
+  .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* FILTERS */
+  .filters {
+    padding: 12px 32px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-right: 2px; white-space: nowrap; flex-shrink: 0; }
+  select, input[type="date"] {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:hover, input[type="date"]:hover { border-color: var(--accent); }
+  .filter-sep { width: 1px; height: 20px; background: var(--border2); margin: 0 2px; flex-shrink: 0; }
+  .period-btns { display: flex; gap: 3px; flex-shrink: 0; }
+  .period-btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .period-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .period-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1200; font-weight: 600; }
+
+  /* RANGO PERSONALIZADO */
+  .cal-wrap { position: relative; }
+  .cal-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.2s;
+    white-space: nowrap;
+  }
+  .cal-btn:hover { border-color: var(--accent); }
+  .cal-btn.active { border-color: var(--accent); color: var(--accent); }
+  .cal-popup {
+    display: none;
+    position: fixed;
+    top: auto;
+    left: auto;
+    z-index: 9999;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    min-width: 260px;
+  }
+  .cal-popup.show { display: block; }
+  .cal-row { display: flex; flex-direction: column; gap: 10px; }
+  .cal-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+  .cal-field input[type="date"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    color-scheme: dark;
+  }
+  .cal-field input[type="date"]:focus { border-color: var(--accent); }
+  .cal-field input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(72%) sepia(40%) saturate(400%) hue-rotate(5deg) brightness(95%);
+    cursor: pointer;
+  }
+  .cal-apply {
+    width: 100%;
+    margin-top: 4px;
+    background: var(--accent);
+    color: #1a1200;
+    border: none;
+    border-radius: 7px;
+    padding: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+
+  /* MAIN LAYOUT */
+  main { padding: 24px 32px; }
+
+  /* LOADING */
+  #loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    gap: 16px;
+    color: var(--muted);
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #content { display: none; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    font-weight: 400;
+    color: var(--accent2);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .kpi-value.money { font-size: 24px; }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .kpi-rate {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .kpi-rate.good { color: var(--green); }
+  .kpi-rate.warn { color: var(--yellow); }
+  .kpi-rate.bad { color: var(--red); }
+
+  /* PROGRESS BAR (Objetivo) */
+  .obj-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .obj-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .obj-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .obj-name { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; }
+  .obj-pct { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent2); }
+  .obj-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .obj-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    background: var(--accent);
+  }
+  .obj-fill.over { background: var(--green); }
+  .obj-fill.low { background: var(--red); }
+  .obj-values { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+
+  /* VENDOR TABLE */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th.right, td.right { text-align: right; }
+  td {
+    padding: 13px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .vendor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+    font-size: 13px;
+  }
+  .vendor-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .rate-cell { font-weight: 600; }
+  .rate-good { color: var(--green); }
+  .rate-warn { color: var(--yellow); }
+  .rate-bad { color: var(--red); }
+
+  /* MINI BAR */
+  .mini-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .mini-bar { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; min-width: 60px; }
+  .mini-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  /* UNITS TABLE */
+  .unit-tipo {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .unit-tipo.oferta { background: rgba(91,141,238,0.15); color: var(--blue); }
+  .unit-tipo.reserva { background: rgba(201,169,110,0.15); color: var(--accent); }
+
+  /* ERROR */
+  .error-box {
+    background: rgba(224,82,82,0.08);
+    border: 1px solid rgba(224,82,82,0.2);
+    border-radius: 10px;
+    padding: 20px;
+    color: var(--red);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  /* EMPTY */
+  .empty-row td {
+    text-align: center;
+    color: var(--muted);
+    padding: 32px;
+    font-style: italic;
+  }
+
+  /* CONFIG PANEL */
+  #config-panel {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #config-panel.show { display: flex; }
+  .config-box {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 500px;
+    margin: 20px;
+  }
+  .config-box h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--accent2);
+    margin-bottom: 6px;
+  }
+  .config-box p { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .config-field { margin-bottom: 16px; }
+  .config-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .config-field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+  }
+  .config-field input:focus { border-color: var(--accent); }
+  .config-actions { display: flex; gap: 10px; margin-top: 24px; }
+  .btn-save {
+    flex: 1;
+    background: var(--accent);
+    color: #1a1200;
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-config {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .btn-config:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 640px) {
+    header, .filters, main { padding-left: 16px; padding-right: 16px; }
+    .kpi-value { font-size: 26px; }
+    th, td { padding: 10px 12px; }
+    .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- CONFIG PANEL -->
+<div id="config-panel">
+  <div class="config-box">
+    <h2>Configuración inicial</h2>
+    <p>Pegá tus credenciales. Se guardan solo en tu navegador, nunca se comparten.</p>
+    <div class="config-field">
+      <label>API Key de Prometheo</label>
+      <input type="password" id="cfg-prometheo" placeholder="Bearer token de Prometheo...">
+    </div>
+    <div class="config-field">
+      <label>Personal Access Token de Airtable</label>
+      <input type="password" id="cfg-airtable-token" placeholder="pat...">
+    </div>
+    <div class="config-field">
+      <label>ID de tu base de Airtable</label>
+      <input type="text" id="cfg-airtable-base" placeholder="appXXXXXXXXXXXXXX">
+    </div>
+    <div class="config-actions">
+      <button class="btn-cancel" onclick="closeConfig()">Cancelar</button>
+      <button class="btn-save" onclick="saveConfig()">Guardar y cargar datos</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <h1>Dashboard Comercial</h1>
+    <p id="last-update">Cargando datos...</p>
+  </div>
+  <div class="header-right">
+    <div class="status-badge"><div class="status-dot" id="dot-prometheo"></div><span id="lbl-prometheo">Prometheo</span></div>
+    <div class="status-badge"><div class="status-dot" id="dot-airtable"></div><span id="lbl-airtable">Airtable</span></div>
+    <button class="btn-config" onclick="openConfig()">⚙ Credenciales</button>
+    <button class="btn-refresh" id="btn-refresh" onclick="loadAll()" disabled>↻ Actualizar</button>
+  </div>
+</header>
+
+<!-- FILTERS -->
+<div class="filters">
+  <span class="filter-label">Año</span>
+  <div class="period-btns" id="year-btns"></div>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Mes</span>
+  <div class="period-btns" id="month-btns"></div>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Rango</span>
+  <div class="period-btns">
+    <button class="period-btn" id="btn-week" onclick="toggleWeek(this)">Esta semana</button>
+  </div>
+  <div class="cal-wrap">
+    <button class="cal-btn" id="btn-custom" onclick="toggleCal()">Personalizado</button>
+    <div class="cal-popup" id="cal-popup">
+      <div class="cal-row">
+        <div class="cal-field">
+          <label>Desde</label>
+          <input type="date" id="cal-from" oninput="updateCalBtn()">
+        </div>
+        <div class="cal-field">
+          <label>Hasta</label>
+          <input type="date" id="cal-to" oninput="updateCalBtn()">
+        </div>
+      </div>
+      <button class="cal-apply" onclick="applyCustomRange()">Aplicar rango</button>
+    </div>
+  </div>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Vendedor</span>
+  <select id="filter-vendor" onchange="renderAll()">
+    <option value="all">Todos</option>
+    <option value="Jonatan Mayo">Jonatan Mayo</option>
+    <option value="Delfina Prandi">Delfina Prandi</option>
+    <option value="Massimo Nervi">Massimo Nervi</option>
+  </select>
+</div>
+
+<!-- MAIN -->
+<main>
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Cargando datos...</span>
+  </div>
+
+  <div id="content">
+
+    <!-- ERROR BOX -->
+    <div id="error-box" class="error-box" style="display:none"></div>
+
+    <!-- KPIs GENERALES -->
+    <div class="section-title">Resumen general</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Leads totales</div>
+        <div class="kpi-value" id="kpi-leads">—</div>
+        <div class="kpi-sub">Desde Prometheo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Visitas concretadas</div>
+        <div class="kpi-value" id="kpi-visitas">—</div>
+        <div class="kpi-sub">Filtradas por período</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Propuestas</div>
+        <div class="kpi-value" id="kpi-propuestas">—</div>
+        <div class="kpi-sub">Ofertas en período</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Reservas</div>
+        <div class="kpi-value" id="kpi-reservas">—</div>
+        <div class="kpi-sub">Reservas en período</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Monto ofertado total</div>
+        <div class="kpi-value money" id="kpi-monto-oferta">—</div>
+        <div class="kpi-sub" id="kpi-monto-oferta-exacto" style="margin-top:4px;font-size:11px;color:var(--muted)">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Monto reservado total</div>
+        <div class="kpi-value money" id="kpi-monto-reserva">—</div>
+        <div class="kpi-sub" id="kpi-monto-reserva-exacto" style="margin-top:4px;font-size:11px;color:var(--muted)">—</div>
+      </div>
+    </div>
+
+    <!-- TASAS DE CONVERSIÓN -->
+    <div class="section-title">Tasas de conversión</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Visitas / Leads</div>
+        <div class="kpi-rate" id="rate-vis-leads" style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--accent2)">—</div>
+        <div class="kpi-sub" style="margin-top:6px">De lead a visita</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Propuestas / Visitas</div>
+        <div class="kpi-rate" id="rate-prop-vis" style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--accent2)">—</div>
+        <div class="kpi-sub" style="margin-top:6px">De visita a propuesta</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Reservas / Propuestas</div>
+        <div class="kpi-rate" id="rate-res-prop" style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--accent2)">—</div>
+        <div class="kpi-sub" style="margin-top:6px">De propuesta a reserva</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Visitas previas promedio</div>
+        <div class="kpi-rate" id="rate-vis-previas" style="font-size:22px;font-family:'DM Serif Display',serif;color:var(--accent2)">—</div>
+        <div class="kpi-sub" style="margin-top:6px">Antes de ofertar/reservar</div>
+      </div>
+    </div>
+
+    <!-- OBJETIVOS -->
+    <div class="section-title">Objetivos del período</div>
+    <div class="obj-grid" id="obj-grid">
+      <!-- generado por JS -->
+    </div>
+
+    <!-- DESEMPEÑO POR VENDEDOR -->
+    <div class="section-title">Desempeño por vendedor</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Vendedor</th>
+            <th class="right">Visitas</th>
+            <th class="right">Propuestas</th>
+            <th class="right">Reservas</th>
+            <th class="right hide-mobile">Prop/Visita</th>
+            <th class="right hide-mobile">Res/Prop</th>
+            <th class="right">Monto ofertado</th>
+            <th class="right hide-mobile">Monto reservado</th>
+          </tr>
+        </thead>
+        <tbody id="vendor-tbody">
+          <tr class="empty-row"><td colspan="8">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- UNIDADES -->
+    <div class="section-title">Detalle de unidades con oferta / reserva</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Unidad</th>
+            <th>Tipo</th>
+            <th>Vendedor</th>
+            <th class="right">Valor ofertado total</th>
+            <th class="right hide-mobile">Valor stand alone</th>
+            <th class="right hide-mobile">Visitas previas (cliente)</th>
+          </tr>
+        </thead>
+        <tbody id="units-tbody">
+          <tr class="empty-row"><td colspan="6">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="height:40px"></div>
+  </div>
+</main>
+
+<script>
+// ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
+const AIRTABLE_BASE   = () => localStorage.getItem('at_base')  || '';
+const AIRTABLE_TOKEN  = () => localStorage.getItem('at_token') || '';
+const PROMETHEO_TOKEN = () => localStorage.getItem('pr_token') || '';
+
+const VENDORS = ['Jonatan Mayo','Delfina Prandi','Massimo Nervi'];
+const VENDOR_COLORS = { 'Jonatan Mayo':'#c9a96e', 'Delfina Prandi':'#5b8dee', 'Massimo Nervi':'#4caf82' };
+
+// Labels de objetivos (los valores vienen de Airtable)
+const OBJ_LABELS = {
+  visitas:      'Visitas',
+  propuestas:   'Propuestas',
+  montoOferta:  'Monto ofertado (USD)',
+  reservas:     'Reservas',
+  montoReserva: 'Monto reservado (USD)',
+};
+
+// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
+let rawLeads     = [];
+let rawVisitas   = [];
+let rawOfertas   = [];
+let rawClientes  = [];
+let rawUnidades  = [];
+let rawObjetivos = [];
+let objetivosActivos = null; // registro de Airtable que aplica al período actual
+let unidadesMap  = {}; // id -> nombre
+let clientesMap  = {}; // id -> { nombreZenvia, qReus }
+// ─── ESTADO DE FILTROS ────────────────────────────────────────────────────────
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+let selectedYear  = new Date().getFullYear();
+let selectedMonth = new Date().getMonth(); // 0-11, -1 = todos
+let weekMode      = false;
+let customMode    = false;
+let customFrom    = null;
+let customTo      = null;
+
+// ─── CALENDARIO PERSONALIZADO ────────────────────────────────────────────────
+function toggleCal() {
+  const popup = document.getElementById('cal-popup');
+  const btn   = document.getElementById('btn-custom');
+  const isOpen = popup.classList.contains('show');
+  if (!isOpen) {
+    const rect = btn.getBoundingClientRect();
+    popup.style.top  = (rect.bottom + window.scrollY + 6) + 'px';
+    popup.style.left = rect.left + 'px';
+  }
+  popup.classList.toggle('show');
+}
+
+function closeCal() {
+  document.getElementById('cal-popup').classList.remove('show');
+}
+
+function updateCalBtn() {
+  // Actualiza visualmente el botón mientras el usuario elige fechas
+  const f = document.getElementById('cal-from').value;
+  const t = document.getElementById('cal-to').value;
+  const btn = document.getElementById('btn-custom');
+  if (f || t) {
+    const fmt = s => s ? s.split('-').reverse().join('/') : '—';
+    btn.textContent = fmt(f) + ' → ' + fmt(t);
+  }
+}
+
+function applyCustomRange() {
+  const f = document.getElementById('cal-from').value;
+  const t = document.getElementById('cal-to').value;
+  if (!f && !t) return;
+  customFrom = f ? new Date(f + 'T00:00:00') : null;
+  customTo   = t ? new Date(t + 'T23:59:59') : customFrom;
+  if (customFrom && customTo && customTo < customFrom) {
+    const tmp = customFrom; customFrom = customTo; customTo = tmp;
+  }
+  customMode    = true;
+  weekMode      = false;
+  selectedMonth = -99;
+  buildFilterUI();
+  closeCal();
+  renderAll();
+}
+
+function buildFilterUI() {
+  const now = new Date();
+  const startYear = 2024;
+  const endYear   = now.getFullYear();
+
+  // Años
+  const yc = document.getElementById('year-btns');
+  yc.innerHTML = '';
+  for (let y = startYear; y <= endYear; y++) {
+    const btn = document.createElement('button');
+    btn.className = 'period-btn' + (y === selectedYear ? ' active' : '');
+    btn.textContent = y;
+    btn.onclick = () => { selectedYear = y; weekMode = false; customMode = false; buildFilterUI(); renderAll(); };
+    yc.appendChild(btn);
+  }
+
+  // Meses
+  const mc = document.getElementById('month-btns');
+  mc.innerHTML = '';
+  // Botón "Todos"
+  const allBtn = document.createElement('button');
+  allBtn.className = 'period-btn' + (selectedMonth === -1 ? ' active' : '');
+  allBtn.textContent = 'Todos';
+  allBtn.onclick = () => { selectedMonth = -1; weekMode = false; customMode = false; buildFilterUI(); renderAll(); };
+  mc.appendChild(allBtn);
+
+  MESES.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'period-btn' + (i === selectedMonth && !weekMode ? ' active' : '');
+    btn.textContent = m;
+    btn.onclick = () => { selectedMonth = i; weekMode = false; customMode = false; buildFilterUI(); renderAll(); };
+    mc.appendChild(btn);
+  });
+
+  // Semana
+  const wb = document.getElementById('btn-week');
+  if (wb) wb.className = 'period-btn' + (weekMode ? ' active' : '');
+
+  // Personalizado
+  const cb = document.getElementById('btn-custom');
+  if (cb) cb.className = 'cal-btn' + (customMode ? ' active' : '');
+}
+
+function toggleWeek(btn) {
+  weekMode = !weekMode;
+  customMode = false;
+  if (weekMode) selectedMonth = new Date().getMonth();
+  buildFilterUI();
+  renderAll();
+}
+
+// ─── FECHAS ───────────────────────────────────────────────────────────────────
+function getPeriodDates() {
+  const now = new Date();
+  if (customMode && customFrom) {
+    const to = customTo || customFrom;
+    const toEnd = new Date(to); toEnd.setHours(23,59,59,999);
+    return { from: customFrom, to: toEnd };
+  }
+  if (weekMode) {
+    const day  = now.getDay() || 7;
+    const from = new Date(now); from.setDate(now.getDate() - day + 1); from.setHours(0,0,0,0);
+    const to   = new Date(from); to.setDate(from.getDate() + 6); to.setHours(23,59,59,999);
+    return { from, to };
+  }
+  if (selectedMonth === -1) {
+    return {
+      from: new Date(selectedYear, 0, 1),
+      to:   new Date(selectedYear, 11, 31, 23, 59, 59)
+    };
+  }
+  return {
+    from: new Date(selectedYear, selectedMonth, 1),
+    to:   new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59)
+  };
+}
+
+function inPeriod(dateStr) {
+  if (!dateStr) return false;
+  const { from, to } = getPeriodDates();
+  const d = new Date(dateStr);
+  return d >= from && d <= to;
+}
+
+// ─── AIRTABLE API ─────────────────────────────────────────────────────────────
+async function fetchAirtable(table, filterFormula = '') {
+  const base  = AIRTABLE_BASE();
+  const token = AIRTABLE_TOKEN();
+  if (!base || !token) throw new Error('Credenciales de Airtable no configuradas');
+
+  let records = [];
+  let offset  = '';
+  const encodedTable = encodeURIComponent(table);
+
+  do {
+    let url = `https://api.airtable.com/v0/${base}/${encodedTable}?pageSize=100`;
+    if (filterFormula) url += `&filterByFormula=${encodeURIComponent(filterFormula)}`;
+    if (offset) url += `&offset=${offset}`;
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Airtable "${table}": ${err.error?.message || res.status}`);
+    }
+    const data = await res.json();
+    records = records.concat(data.records || []);
+    offset = data.offset || '';
+  } while (offset);
+
+  return records;
+}
+
+// ─── PROMETHEO API ────────────────────────────────────────────────────────────
+async function fetchPrometeo() {
+  const token = PROMETHEO_TOKEN();
+  if (!token) throw new Error('Token de Prometheo no configurado');
+
+  const { from, to } = getPeriodDates();
+  const startDate = from.toISOString();
+  const endDate   = to.toISOString();
+
+  let leads  = [];
+  let page   = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = `https://long-disk-d63f.gslavutzky.workers.dev/leads?page=${page}&limit=100&start_date=${startDate}&end_date=${endDate}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Prometheo: ${err.message || res.status}`);
+    }
+    const data = await res.json();
+    leads = leads.concat(data.leads || []);
+    const pagination = data.pagination || {};
+    hasMore = page < (pagination.total_pages || 1);
+    page++;
+  }
+  return leads;
+}
+
+// ─── CARGA PRINCIPAL ──────────────────────────────────────────────────────────
+async function loadAll() {
+  buildFilterUI();
+  if (!AIRTABLE_BASE() || !AIRTABLE_TOKEN() || !PROMETHEO_TOKEN()) {
+    openConfig(); return;
+  }
+
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('btn-refresh').disabled  = true;
+  document.getElementById('error-box').style.display = 'none';
+
+  let errors = [];
+
+  // Prometheo
+  try {
+    rawLeads = await fetchPrometeo();
+    setDot('prometheo', 'ok');
+  } catch(e) {
+    errors.push('Prometheo: ' + e.message);
+    rawLeads = [];
+    setDot('prometheo', 'err');
+  }
+
+  // Airtable — Visitas concretadas
+  try {
+    rawVisitas = await fetchAirtable('Visitas y Reuniones', "{Status}='Concretada'");
+    setDot('airtable', 'ok');
+  } catch(e) {
+    errors.push('Visitas: ' + e.message);
+    rawVisitas = [];
+    setDot('airtable', 'err');
+  }
+
+  // Airtable — Ofertas y Reservas
+  try {
+    rawOfertas = await fetchAirtable('Ofertas y Reservas', "OR({Tipo}='Oferta',{Tipo}='Reserva')");
+  } catch(e) {
+    errors.push('Ofertas: ' + e.message);
+    rawOfertas = [];
+  }
+
+  // Airtable — Clientes
+  try {
+    rawClientes = await fetchAirtable('Clientes');
+  } catch(e) {
+    errors.push('Clientes: ' + e.message);
+    rawClientes = [];
+  }
+
+  // Airtable — Unidades (tabla vinculada desde Ofertas y Reservas)
+  try {
+    rawUnidades = await fetchAirtable('Unidades');
+  } catch(e) {
+    errors.push('Unidades: ' + e.message);
+    rawUnidades = [];
+  }
+
+  // Airtable — Objetivos
+  try {
+    rawObjetivos = await fetchAirtable('Objetivos');
+  } catch(e) {
+    errors.push('Objetivos: ' + e.message);
+    rawObjetivos = [];
+  }
+
+  // Construir mapa Unidades: id -> nombre
+  unidadesMap = {};
+  rawUnidades.forEach(u => {
+    unidadesMap[u.id] = u.fields['Name'] || u.fields['Nombre'] || u.id;
+  });
+
+  // Construir mapa Clientes: id -> { nombreZenvia, qReus }
+  clientesMap = {};
+  rawClientes.forEach(c => {
+    clientesMap[c.id] = {
+      nombreZenvia: c.fields['Nombre en Zenvia'] || '',
+      qReus: c.fields['Q Reus'] || 0
+    };
+  });
+
+  if (errors.length) {
+    const box = document.getElementById('error-box');
+    box.innerHTML = '<strong>Algunos datos no pudieron cargarse:</strong><br>' + errors.join('<br>');
+    box.style.display = 'block';
+  }
+
+
+  document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  document.getElementById('btn-refresh').disabled = false;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+
+  renderAll();
+}
+
+// ─── OBTENER OBJETIVOS DEL PERÍODO ACTIVO ────────────────────────────────────
+function getObjetivosActivos() {
+  const vendor = selectedVendor();
+  const { from, to } = getPeriodDates();
+  const midPoint = new Date((from.getTime() + to.getTime()) / 2);
+
+  // Buscar registro que coincida con vendedor y cuyo rango de fechas contenga el período
+  const vendorLabel = vendor === 'all' ? 'Empresa' : vendor;
+
+  // Primero intentar match exacto de vendedor y período
+  let match = rawObjetivos.find(r => {
+    const f = r.fields;
+    const v = f['Vendedor'] || '';
+    const fi = f['Fecha inicio'] ? new Date(f['Fecha inicio']) : null;
+    const ff = f['Fecha fin']    ? new Date(f['Fecha fin'])    : null;
+    if (v !== vendorLabel) return false;
+    if (!fi || !ff) return false;
+    return midPoint >= fi && midPoint <= ff;
+  });
+
+  // Si no hay match por vendedor específico, buscar "Empresa"
+  if (!match && vendor !== 'all') {
+    match = rawObjetivos.find(r => {
+      const f = r.fields;
+      const fi = f['Fecha inicio'] ? new Date(f['Fecha inicio']) : null;
+      const ff = f['Fecha fin']    ? new Date(f['Fecha fin'])    : null;
+      if (f['Vendedor'] !== 'Empresa') return false;
+      if (!fi || !ff) return false;
+      return midPoint >= fi && midPoint <= ff;
+    });
+  }
+
+  if (!match) return null;
+  const f = match.fields;
+  return {
+    visitas:      f['Obj. visitas']           || 0,
+    propuestas:   f['Obj. cant. propuestas']  || 0,
+    montoOferta:  f['Obj. monto propuestas']  || 0,
+    reservas:     f['Obj. cant. reservas']    || 0,
+    montoReserva: f['Obj. monto reservas']    || 0,
+  };
+}
+
+// ─── FILTRAR POR VENDEDOR ─────────────────────────────────────────────────────
+function selectedVendor() { return document.getElementById('filter-vendor').value; }
+
+function filterByVendor(records, field) {
+  const v = selectedVendor();
+  if (v === 'all') return records;
+  return records.filter(r => matchVendor(r, field, v));
+}
+
+// ─── FILTRAR POR PERÍODO ──────────────────────────────────────────────────────
+function filterByPeriod(records, dateField) {
+  return records.filter(r => inPeriod(r.fields[dateField] || r.createdTime));
+}
+
+// ─── RENDER PRINCIPAL ─────────────────────────────────────────────────────────
+async function renderAll() {
+  // Actualizar leads de Prometheo si cambia el período
+  try {
+    rawLeads = await fetchPrometeo();
+    setDot('prometheo', 'ok');
+  } catch(e) {
+    setDot('prometheo', 'err');
+  }
+
+  // Aplicar filtros
+  const visitas   = filterByVendor(filterByPeriod(rawVisitas, 'Fecha'), 'Asesor');
+  const ofertas   = filterByVendor(filterByPeriod(rawOfertas.filter(r => r.fields['Tipo'] === 'Oferta'), 'Fecha'), 'Colaborador');
+  const reservas  = filterByVendor(filterByPeriod(rawOfertas.filter(r => r.fields['Tipo'] === 'Reserva'), 'Fecha'), 'Colaborador');
+  const allTipos  = filterByVendor(filterByPeriod(rawOfertas, 'Fecha'), 'Colaborador');
+
+  const leads     = rawLeads;
+
+  // Montos
+  const sumaMontoOferta  = sumar(ofertas,  'Valor Ofertado / de Reserva Total');
+  const sumaMontoReserva = sumar(reservas, 'Valor Ofertado / de Reserva Total');
+
+  // KPIs principales
+  setText('kpi-leads',    leads.length);
+  setText('kpi-visitas',  visitas.length);
+  setText('kpi-propuestas', ofertas.length);
+  setText('kpi-reservas', reservas.length);
+  setText('kpi-monto-oferta',  fmtUSD(sumaMontoOferta));
+  setText('kpi-monto-reserva', fmtUSD(sumaMontoReserva));
+  setText('kpi-monto-oferta-exacto',  sumaMontoOferta ? 'Exacto: ' + fmtUSDExacto(sumaMontoOferta) : '');
+  setText('kpi-monto-reserva-exacto', sumaMontoReserva ? 'Exacto: ' + fmtUSDExacto(sumaMontoReserva) : '');
+
+  // Tasas de conversión
+  const rVL  = leads.length  ? pct(visitas.length,  leads.length)  : '—';
+  const rPV  = visitas.length ? pct(ofertas.length,  visitas.length) : '—';
+  const rRP  = ofertas.length ? pct(reservas.length, ofertas.length) : '—';
+
+  // Visitas previas promedio (Q Reus) — usando mapa global clientesMap por ID
+  const idsClientes = allTipos.flatMap(r => {
+    const c = r.fields['Clientes'];
+    if (!c) return [];
+    return Array.isArray(c) ? c : [c];
+  }).filter(Boolean);
+  const visitasPrevias = idsClientes.map(id => (clientesMap[id] || {}).qReus || 0);
+  const promVP = visitasPrevias.length ? (visitasPrevias.reduce((a,b)=>a+b,0) / visitasPrevias.length).toFixed(1) : '—';
+
+  setText('rate-vis-leads',  rVL);
+  setText('rate-prop-vis',   rPV);
+  setText('rate-res-prop',   rRP);
+  setText('rate-vis-previas', promVP !== '—' ? promVP + 'x' : '—');
+
+  // Objetivos
+  renderObjetivos({ visitas: visitas.length, propuestas: ofertas.length, montoOferta: sumaMontoOferta, reservas: reservas.length, montoReserva: sumaMontoReserva });
+
+  // Tabla vendedores
+  renderVendorTable(visitas, ofertas, reservas);
+
+  // Tabla unidades
+  renderUnitsTable(allTipos);
+}
+
+// ─── OBJETIVOS ────────────────────────────────────────────────────────────────
+function renderObjetivos(reales) {
+  const grid = document.getElementById('obj-grid');
+  const obj  = getObjetivosActivos();
+
+  if (!obj) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:20px;color:var(--muted);font-size:13px;text-align:center;">
+      No hay objetivos cargados para este período en Airtable. Agregá un registro en la tabla "Objetivos" con las fechas correspondientes.
+    </div>`;
+    return;
+  }
+
+  const items = [
+    { key: 'visitas',      real: reales.visitas,      objetivo: obj.visitas,      fmt: v => v },
+    { key: 'propuestas',   real: reales.propuestas,   objetivo: obj.propuestas,   fmt: v => v },
+    { key: 'montoOferta',  real: reales.montoOferta,  objetivo: obj.montoOferta,  fmt: fmtUSD },
+    { key: 'reservas',     real: reales.reservas,     objetivo: obj.reservas,     fmt: v => v },
+    { key: 'montoReserva', real: reales.montoReserva, objetivo: obj.montoReserva, fmt: fmtUSD },
+  ];
+
+  grid.innerHTML = items.map(item => {
+    const pct_val  = item.objetivo > 0 ? Math.min((item.real / item.objetivo) * 100, 100) : 0;
+    const pct_disp = item.objetivo > 0 ? Math.round((item.real / item.objetivo) * 100) : 0;
+    const cls = pct_disp >= 100 ? 'over' : pct_disp < 50 ? 'low' : '';
+    const label = OBJ_LABELS[item.key];
+    return `
+      <div class="obj-card">
+        <div class="obj-header">
+          <span class="obj-name">${label}</span>
+          <span class="obj-pct">${pct_disp}%</span>
+        </div>
+        <div class="obj-track"><div class="obj-fill ${cls}" style="width:${pct_val}%"></div></div>
+        <div class="obj-values">
+          <span>Real: <strong style="color:var(--text)">${item.fmt(item.real)}</strong></span>
+          <span>Obj: ${item.fmt(item.objetivo)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── TABLA VENDEDORES ─────────────────────────────────────────────────────────
+function renderVendorTable(visitas, ofertas, reservas) {
+  const tbody = document.getElementById('vendor-tbody');
+  const vs = selectedVendor();
+  const list = vs === 'all' ? VENDORS : [vs];
+
+  const maxVis = Math.max(...list.map(v => visitas.filter(r => matchVendor(r,'Asesor',v)).length), 1);
+
+  tbody.innerHTML = list.map(vendor => {
+    const vis = visitas.filter(r => matchVendor(r,'Asesor',vendor)).length;
+    const pro = ofertas.filter(r => matchVendor(r,'Colaborador',vendor)).length;
+    const res = reservas.filter(r => matchVendor(r,'Colaborador',vendor)).length;
+    const montoO = sumar(ofertas.filter(r => matchVendor(r,'Colaborador',vendor)), 'Valor Ofertado / de Reserva Total');
+    const montoR = sumar(reservas.filter(r => matchVendor(r,'Colaborador',vendor)), 'Valor Ofertado / de Reserva Total');
+    const rPV = vis ? pct(pro, vis) : '—';
+    const rRP = pro ? pct(res, pro) : '—';
+    const barW = Math.round((vis / maxVis) * 100);
+    const color = VENDOR_COLORS[vendor] || '#888';
+
+    return `<tr>
+      <td>
+        <div class="vendor-pill">
+          <div class="vendor-dot" style="background:${color}"></div>
+          ${vendor}
+        </div>
+        <div class="mini-bar-wrap" style="margin-top:6px">
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:${barW}%;background:${color}"></div></div>
+          <span style="font-size:11px;color:var(--muted);min-width:20px">${vis}</span>
+        </div>
+      </td>
+      <td class="right">${vis}</td>
+      <td class="right">${pro}</td>
+      <td class="right">${res}</td>
+      <td class="right hide-mobile"><span class="rate-cell">${rPV}</span></td>
+      <td class="right hide-mobile"><span class="rate-cell">${rRP}</span></td>
+      <td class="right">${fmtUSDExacto(montoO)}</td>
+      <td class="right hide-mobile">${fmtUSDExacto(montoR)}</td>
+    </tr>`;
+  }).join('');
+
+  if (!list.length) tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Sin datos para el período seleccionado</td></tr>';
+}
+
+// ─── TABLA UNIDADES ───────────────────────────────────────────────────────────
+function renderUnitsTable(allTipos) {
+  const tbody = document.getElementById('units-tbody');
+  if (!allTipos.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Sin unidades con oferta o reserva en el período</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = allTipos.map(r => {
+    const f = r.fields;
+    const tipo   = extractText(f['Tipo']) || '—';
+
+    // Unidad: linked record -> buscar nombre en mapa
+    const unidadIds = Array.isArray(f['Unidades']) ? f['Unidades'] : (f['Unidades'] ? [f['Unidades']] : []);
+    const unidad = unidadIds.map(id => unidadesMap[id] || id).join(', ') || '—';
+
+    const colab  = extractText(f['Colaborador']) || '—';
+    const montoT = f['Valor Ofertado / de Reserva Total'];
+    const montoS = f['Valor unidad stand alone'];
+
+    // Cliente: linked record -> buscar en mapa -> obtener Q Reus
+    const clienteIds = Array.isArray(f['Clientes']) ? f['Clientes'] : (f['Clientes'] ? [f['Clientes']] : []);
+    const qReus = clienteIds.length
+      ? clienteIds.map(id => (clientesMap[id] || {}).qReus ?? '—').join(', ')
+      : '—';
+
+    const tipoCls = tipo === 'Reserva' ? 'reserva' : 'oferta';
+
+    return `<tr>
+      <td><strong>${unidad}</strong></td>
+      <td><span class="unit-tipo ${tipoCls}">${tipo}</span></td>
+      <td>${colab}</td>
+      <td class="right">${montoT != null ? fmtUSDExacto(montoT) : '—'}</td>
+      <td class="right hide-mobile">${montoS != null ? fmtUSDExacto(montoS) : '—'}</td>
+      <td class="right hide-mobile">${qReus !== '—' ? qReus + ' visitas' : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function sumar(records, field) {
+  return records.reduce((acc, r) => acc + (parseFloat(r.fields[field]) || 0), 0);
+}
+function pct(num, den) {
+  if (!den) return '—';
+  return Math.round((num / den) * 100) + '%';
+}
+function fmtUSD(n) {
+  if (!n && n !== 0) return '—';
+  if (n >= 1000000) return 'USD ' + (n/1000000).toFixed(2) + 'M';
+  if (n >= 1000)    return 'USD ' + (n/1000).toFixed(1) + 'k';
+  return 'USD ' + n.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtUSDExacto(n) {
+  if (!n && n !== 0) return '—';
+  return 'USD ' + Math.round(n).toLocaleString('es-AR');
+}
+function setText(id, val) { const el = document.getElementById(id); if(el) el.textContent = val; }
+function setDot(which, state) {
+  const dot = document.getElementById('dot-'+which);
+  if (dot) { dot.className = 'status-dot ' + state; }
+}
+function extractText(val) {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (Array.isArray(val)) {
+    return val.map(x => {
+      if (typeof x === 'string') return x;
+      if (typeof x === 'object' && x !== null) return x.name || x.value || x.text || Object.values(x)[0] || '';
+      return String(x);
+    }).filter(Boolean).join(', ');
+  }
+  if (typeof val === 'object') return val.name || val.value || val.text || '';
+  return String(val);
+}
+
+function matchVendor(record, field, vendor) {
+  const val = record.fields[field];
+  if (!val) return false;
+  const text = extractText(val);
+  return text.toLowerCase().includes(vendor.toLowerCase());
+}
+
+// ─── PERÍODO ──────────────────────────────────────────────────────────────────
+function setPeriod(period, btn) {
+  currentPeriod = period;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cd = document.getElementById('custom-dates');
+  cd.style.display = period === 'custom' ? 'flex' : 'none';
+  if (period !== 'custom') loadAll();
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+function openConfig() { document.getElementById('config-panel').classList.add('show'); }
+function closeConfig() { document.getElementById('config-panel').classList.remove('show'); }
+function saveConfig() {
+  const pr  = document.getElementById('cfg-prometheo').value.trim();
+  const at  = document.getElementById('cfg-airtable-token').value.trim();
+  const base= document.getElementById('cfg-airtable-base').value.trim();
+  if (!pr || !at || !base) { alert('Completá los tres campos'); return; }
+  localStorage.setItem('pr_token', pr);
+  localStorage.setItem('at_token', at);
+  localStorage.setItem('at_base',  base);
+  closeConfig();
+  loadAll();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('click', (e) => {
+  const wrap = document.querySelector('.cal-wrap');
+  if (wrap && !wrap.contains(e.target)) closeCal();
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Pre-cargar valores guardados en config panel
+  const prEl = document.getElementById('cfg-prometheo');
+  const atEl = document.getElementById('cfg-airtable-token');
+  const baseEl= document.getElementById('cfg-airtable-base');
+  if (prEl) prEl.value   = localStorage.getItem('pr_token') || '';
+  if (atEl) atEl.value   = localStorage.getItem('at_token') || '';
+  if (baseEl) baseEl.value = localStorage.getItem('at_base') || '';
+
+  buildFilterUI();
+  if (!AIRTABLE_BASE() || !AIRTABLE_TOKEN() || !PROMETHEO_TOKEN()) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    openConfig();
+  } else {
+    loadAll();
+  }
+});
+</script>
+</body>
+</html>
