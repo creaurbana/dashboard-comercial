@@ -1075,7 +1075,7 @@ async function loadAll() {
   ] = await Promise.allSettled([
     fetchPrometeo(true),
     fetchAirtable('Visitas y Reuniones', "{Status}='Concretada'", true),
-    fetchAirtable('Ofertas y Reservas', "AND(OR({Tipo}='Oferta',{Tipo}='Reserva'),{Dash comercial Joni}='SI')", true),
+    fetchAirtable('Ofertas y Reservas', "AND(OR({Tipo}='Oferta',{Tipo}='Reserva'),{Comercializadora}='Si')", true),
     fetchAirtable('Clientes', '', true),
     fetchAirtable('Unidades', '', true),
     fetchAirtable('Objetivos', '', true)
